@@ -15,6 +15,7 @@ import androidx.core.app.ActivityCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.prototype_ocr.data.*
+import com.example.prototype_ocr.api.ServerUploadHelper
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import java.io.File
@@ -242,15 +243,32 @@ class UploadSelectionActivity : AppCompatActivity() {
             longitude = longitude
         )
         
-        // Save upload
+        // Save upload locally first
         val saved = uploadManager.saveUpload(upload)
         
-        if (saved) {
-            Toast.makeText(this, "Upload created successfully for $deviceId!", Toast.LENGTH_LONG).show()
-            finish()
-        } else {
+        if (!saved) {
             Toast.makeText(this, "Failed to save upload", Toast.LENGTH_SHORT).show()
+            return
         }
+        
+        // Get images directory
+        val imagesDir = File(filesDir, "lcd_images")
+        
+        // Show upload dialog with server option
+        ServerUploadHelper.showUploadDialog(
+            context = this,
+            upload = upload,
+            imagesDir = imagesDir,
+            pdfFile = pdfFile,
+            onLocalSaveOnly = {
+                Toast.makeText(this, "Upload saved locally for $deviceId", Toast.LENGTH_LONG).show()
+                finish()
+            },
+            onServerUploadSuccess = { response ->
+                Toast.makeText(this, "Upload successful! Server ID: ${response.uploadId}", Toast.LENGTH_LONG).show()
+                finish()
+            }
+        )
     }
 }
 

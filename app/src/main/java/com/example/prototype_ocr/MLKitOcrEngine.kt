@@ -23,7 +23,15 @@ data class OcrResult(
     val value: Double,
     val rawText: String,
     val confidence: Float,
-    val boundingBox: android.graphics.Rect? = null
+    val boundingBox: android.graphics.Rect? = null,
+    val stripResults: List<StripOcrResult>? = null // For debugging strip-based OCR
+)
+
+data class StripOcrResult(
+    val stripIndex: Int,
+    val text: String,
+    val value: Double?,
+    val boundingBox: android.graphics.Rect
 )
 
 class MLKitOcrEngine(private val deviceType: DeviceType = DeviceType.HORIBA) {
@@ -32,9 +40,11 @@ class MLKitOcrEngine(private val deviceType: DeviceType = DeviceType.HORIBA) {
         init {
             System.loadLibrary("opencv_java4")
         }
+        const val HORIBA_STRIP_COUNT = 5 // Number of horizontal strips for Horiba
     }
 
     private val textRecognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+    var useStripProcessing = true // Enable/disable strip-based processing for Horiba
 
     // Regex patterns for mg/dL detection optimized for Horiba displays
     private val mgDlPatterns = listOf(
@@ -48,7 +58,13 @@ class MLKitOcrEngine(private val deviceType: DeviceType = DeviceType.HORIBA) {
         Pattern.compile("""Result\s*:?\s*(\d+(?:\.\d+)?)\s*mg/dL""", Pattern.CASE_INSENSITIVE)
     )
 
-    suspend fun processImage(bitmap: Bitmap): Pair<OcrResult ?, String> {
+    suspend fun processImage(bitmap: Bitmap): Pair<OcrResult?, String> {
+        // Use strip processing for Horiba if enabled
+        if (deviceType == DeviceType.HORIBA && useStripProcessing) {
+            return processImageWithStrips(bitmap)
+        }
+        
+        // Original processing for Robonik or when strip processing is disabled
         return suspendCancellableCoroutine { continuation ->
             // Apply preprocessing to improve OCR accuracy
             val preprocessedBitmap = preprocessImage(bitmap)
@@ -62,6 +78,104 @@ class MLKitOcrEngine(private val deviceType: DeviceType = DeviceType.HORIBA) {
                 }
                 .addOnFailureListener { exception ->
                     continuation.resumeWithException(exception)
+                }
+        }
+    }
+    
+    /**
+     * Process image using horizontal strips for better text ordering
+     * Specifically for Horiba devices where text order matters
+     */
+    private suspend fun processImageWithStrips(bitmap: Bitmap): Pair<OcrResult?, String> {
+        val preprocessedBitmap = preprocessImage(bitmap)
+        val stripHeight = preprocessedBitmap.height / HORIBA_STRIP_COUNT
+        val stripResults = mutableListOf<StripOcrResult>()
+        val allTextLines = mutableListOf<String>()
+        
+        // Process each horizontal strip
+        for (i in 0 until HORIBA_STRIP_COUNT) {
+            val top = i * stripHeight
+            val bottom = if (i == HORIBA_STRIP_COUNT - 1) preprocessedBitmap.height else (i + 1) * stripHeight
+            val height = bottom - top
+            
+            // Extract strip bitmap
+            val stripBitmap = Bitmap.createBitmap(
+                preprocessedBitmap,
+                0,
+                top,
+                preprocessedBitmap.width,
+                height
+            )
+            
+            // Process strip with OCR
+            val stripText = processStrip(stripBitmap, i)
+            if (stripText.isNotEmpty()) {
+                allTextLines.add(stripText)
+                
+                // Try to find mg/dL value in this strip
+                val value = findMgDlValue(stripText)
+                stripResults.add(
+                    StripOcrResult(
+                        stripIndex = i,
+                        text = stripText,
+                        value = value,
+                        boundingBox = android.graphics.Rect(0, top, preprocessedBitmap.width, bottom)
+                    )
+                )
+            }
+            
+            stripBitmap.recycle()
+        }
+        
+        // Combine all strip texts in order
+        val combinedText = allTextLines.joinToString("\n")
+        
+        // Find the best mg/dL value from all strips
+        val bestStrip = stripResults.firstOrNull { it.value != null }
+        
+        val result = if (bestStrip != null) {
+            val confidence = calculateConfidence(bestStrip.text, bestStrip.value!!)
+            if (confidence >= 0.7f) {
+                OcrResult(
+                    value = bestStrip.value,
+                    rawText = bestStrip.text,
+                    confidence = confidence,
+                    boundingBox = bestStrip.boundingBox,
+                    stripResults = stripResults
+                )
+            } else null
+        } else {
+            // Fallback: try to extract from combined text
+            val value = findMgDlValue(combinedText)
+            if (value != null) {
+                val confidence = calculateConfidence(combinedText, value)
+                if (confidence >= 0.7f) {
+                    OcrResult(
+                        value = value,
+                        rawText = combinedText,
+                        confidence = confidence,
+                        stripResults = stripResults
+                    )
+                } else null
+            } else null
+        }
+        
+        return Pair(result, combinedText)
+    }
+    
+    /**
+     * Process a single horizontal strip and return detected text
+     */
+    private suspend fun processStrip(stripBitmap: Bitmap, stripIndex: Int): String {
+        return suspendCancellableCoroutine { continuation ->
+            val inputImage = InputImage.fromBitmap(stripBitmap, 0)
+            
+            textRecognizer.process(inputImage)
+                .addOnSuccessListener { visionText ->
+                    continuation.resume(visionText.text)
+                }
+                .addOnFailureListener { exception ->
+                    continuation.resume("") // Return empty string on failure
                 }
         }
     }
@@ -349,6 +463,7 @@ class MLKitOcrEngine(private val deviceType: DeviceType = DeviceType.HORIBA) {
     private fun normalizeUnits(text: String): String {
         return text
             .replace("resut", "result")
+            .replace("resutt", "result")
             .replace("recut", "result")
             .replace("resu1t", "result")
             .replace("mgfdl", "mg/dl")

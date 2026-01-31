@@ -18,8 +18,16 @@ class OverlayView @JvmOverloads constructor(
         strokeWidth = 8f
         style = Paint.Style.STROKE
     }
+    
+    private val stripPaint = Paint().apply {
+        color = Color.GREEN
+        strokeWidth = 3f
+        style = Paint.Style.STROKE
+    }
 
     private val boxRect = RectF()
+    var showStrips = false // Control strip visualization
+    var numberOfStrips = 5 // Default number of horizontal strips
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
@@ -32,10 +40,25 @@ class OverlayView @JvmOverloads constructor(
         )
 
         canvas.drawRect(boxRect, paint)
+        
+        // Draw horizontal strip dividers if enabled
+        if (showStrips) {
+            val stripHeight = boxRect.height() / numberOfStrips
+            for (i in 1 until numberOfStrips) {
+                val y = boxRect.top + (stripHeight * i)
+                canvas.drawLine(boxRect.left, y, boxRect.right, y, stripPaint)
+            }
+        }
     }
 
     fun getBoxRect(): RectF {
         return RectF(boxRect)
+    }
+    
+    fun enableStripVisualization(enabled: Boolean, strips: Int = 5) {
+        showStrips = enabled
+        numberOfStrips = strips
+        invalidate()
     }
 }
 

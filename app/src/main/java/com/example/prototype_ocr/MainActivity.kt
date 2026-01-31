@@ -84,6 +84,11 @@ class MainActivity : AppCompatActivity() {
         overlayView = findViewById(R.id.overlayView)
         previewView = findViewById(R.id.previewView)
 
+        // Enable strip visualization for Horiba devices
+        if (deviceType == DeviceType.HORIBA) {
+            overlayView.enableStripVisualization(true, MLKitOcrEngine.HORIBA_STRIP_COUNT)
+        }
+
         // Check and request permissions
         requestPermissions()
     }

@@ -47,6 +47,12 @@ dependencies {
     implementation("androidx.recyclerview:recyclerview:1.3.2")
     implementation("androidx.cardview:cardview:1.0.0")
     
+    // Material Design Components (for NavigationView)
+    implementation("com.google.android.material:material:1.11.0")
+    
+    // DrawerLayout
+    implementation("androidx.drawerlayout:drawerlayout:1.2.0")
+    
     // Camera
     implementation("androidx.camera:camera-camera2:1.3.1")
     implementation("androidx.camera:camera-lifecycle:1.3.1")
@@ -66,6 +72,11 @@ dependencies {
     
     // Gson for JSON serialization
     implementation("com.google.code.gson:gson:2.10.1")
+    
+    // Retrofit for API calls
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
     
     // PDF generation
     implementation("com.itextpdf:itext7-core:7.2.5")
