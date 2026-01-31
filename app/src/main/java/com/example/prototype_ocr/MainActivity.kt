@@ -30,6 +30,9 @@ import com.example.prototype_ocr.data.RecordsManager
 import com.example.prototype_ocr.data.TestRecord
 import com.example.prototype_ocr.data.TestType
 import com.example.prototype_ocr.data.DeviceType
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
+import android.location.Location
 
 
 class MainActivity : AppCompatActivity() {
@@ -39,6 +42,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var imageCapture: ImageCapture
     private lateinit var recordsManager: RecordsManager
     private lateinit var deviceType: DeviceType
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private var currentLocation: Location? = null
 
     private val ocrExecutor: ExecutorService = Executors.newSingleThreadExecutor()
     private lateinit var mlkitOcrEngine: MLKitOcrEngine
@@ -58,6 +63,9 @@ class MainActivity : AppCompatActivity() {
         // Initialize OCR engine with device type
         mlkitOcrEngine = MLKitOcrEngine(deviceType)
         
+        // Initialize location client
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        
         // Initialize RecordsManager
         recordsManager = RecordsManager(this)
 
@@ -76,16 +84,44 @@ class MainActivity : AppCompatActivity() {
         overlayView = findViewById(R.id.overlayView)
         previewView = findViewById(R.id.previewView)
 
+        // Check and request permissions
+        requestPermissions()
+    }
+    
+    private fun requestPermissions() {
+        val permissionsNeeded = mutableListOf<String>()
+        
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
-            == PackageManager.PERMISSION_GRANTED
+            != PackageManager.PERMISSION_GRANTED
         ) {
-            startCamera()
-        } else {
+            permissionsNeeded.add(Manifest.permission.CAMERA)
+        }
+        
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            permissionsNeeded.add(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+        
+        if (permissionsNeeded.isNotEmpty()) {
             ActivityCompat.requestPermissions(
                 this,
-                arrayOf(Manifest.permission.CAMERA),
+                permissionsNeeded.toTypedArray(),
                 1001
             )
+        } else {
+            startCamera()
+            getLastLocation()
+        }
+    }
+    
+    private fun getLastLocation() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+            == PackageManager.PERMISSION_GRANTED
+        ) {
+            fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+                currentLocation = location
+            }
         }
     }
 
@@ -96,11 +132,26 @@ class MainActivity : AppCompatActivity() {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
 
-        if (requestCode == 1001 &&
-            grantResults.isNotEmpty() &&
-            grantResults[0] == PackageManager.PERMISSION_GRANTED
-        ) {
-            startCamera()
+        if (requestCode == 1001 && grantResults.isNotEmpty()) {
+            var allGranted = true
+            for (result in grantResults) {
+                if (result != PackageManager.PERMISSION_GRANTED) {
+                    allGranted = false
+                    break
+                }
+            }
+            
+            if (allGranted) {
+                startCamera()
+                getLastLocation()
+            } else {
+                // At minimum, camera permission is needed
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+                    == PackageManager.PERMISSION_GRANTED
+                ) {
+                    startCamera()
+                }
+            }
         }
     }
 
@@ -279,7 +330,9 @@ class MainActivity : AppCompatActivity() {
                 confidence = ocrResult?.confidence,
                 validationTimestamp = timestamp,
                 imageFileName = filename,
-                isValidResult = ocrResult != null
+                isValidResult = ocrResult != null,
+                latitude = currentLocation?.latitude,
+                longitude = currentLocation?.longitude
             )
             
             // Save to RecordsManager

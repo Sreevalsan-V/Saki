@@ -109,68 +109,96 @@ class MLKitOcrEngine(private val deviceType: DeviceType = DeviceType.HORIBA) {
     /**
      * Robonik preprocessing - Light blue background with dark blue text and white values
      * Optimized for light blue LCD with dark blue text and white numbers
+     * Uses adaptive threshold selection (140-190 range) for varying lighting conditions
      */
     private fun preprocessRobonik(bitmap: Bitmap): Bitmap {
-        val src = Mat()
-        Utils.bitmapToMat(bitmap, src)
-
-        // Convert to HSV to better isolate blue background
-        val hsv = Mat()
-        Imgproc.cvtColor(src, hsv, Imgproc.COLOR_BGR2HSV)
-
-        // Convert to grayscale for text extraction
+        val mat = Mat()
+        Utils.bitmapToMat(bitmap, mat)
+        
+        // Convert to grayscale
         val gray = Mat()
-        Imgproc.cvtColor(src, gray, Imgproc.COLOR_BGR2GRAY)
-
-        // Apply bilateral filter to preserve edges while smoothing
-        val filtered = Mat()
-        Imgproc.bilateralFilter(gray, filtered, 9, 75.0, 75.0)
-
-        // Apply CLAHE for better contrast
-        val clahe = Imgproc.createCLAHE(2.5, Size(8.0, 8.0))
-        val enhanced = Mat()
-        clahe.apply(filtered, enhanced)
-
-        // Apply adaptive thresholding to separate white text from background
-        val threshold = Mat()
-        Imgproc.adaptiveThreshold(
-            enhanced,
-            threshold,
-            255.0,
-            Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C,
-            Imgproc.THRESH_BINARY,
-            11,
-            2.0
-        )
-
-        // Invert so text is black on white (better for OCR)
-        val inverted = Mat()
-        Core.bitwise_not(threshold, inverted)
-
-        // Slight morphological operations to clean up noise
+        Imgproc.cvtColor(mat, gray, Imgproc.COLOR_BGR2GRAY)
+        
+        // Try multiple threshold values and select the best result
+        val thresholdRange = 140..190 step 10
+        var bestResult: Mat? = null
+        var bestScore = 0.0
+        
+        for (threshold in thresholdRange) {
+            val bw = Mat()
+            Imgproc.threshold(gray, bw, threshold.toDouble(), 255.0, Imgproc.THRESH_BINARY)
+            
+            // Invert: white text on black background for OCR
+            val inverted = Mat()
+            Core.bitwise_not(bw, inverted)
+            
+            // Score based on text-like regions (white pixels in reasonable distribution)
+            val score = evaluateThreshold(inverted)
+            
+            if (score > bestScore) {
+                bestScore = score
+                bestResult?.release()
+                bestResult = inverted.clone()
+            }
+            
+            bw.release()
+            inverted.release()
+        }
+        
+        // Apply morphological operations to clean up the best result
         val kernel = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, Size(2.0, 2.0))
-        val morphed = Mat()
-        Imgproc.morphologyEx(inverted, morphed, Imgproc.MORPH_CLOSE, kernel)
-
-        val outputBitmap = Bitmap.createBitmap(
-            morphed.cols(),
-            morphed.rows(),
+        val cleaned = Mat()
+        Imgproc.morphologyEx(bestResult!!, cleaned, Imgproc.MORPH_CLOSE, kernel)
+        Imgproc.morphologyEx(cleaned, cleaned, Imgproc.MORPH_OPEN, kernel)
+        
+        // Convert back to bitmap
+        val resultBitmap = Bitmap.createBitmap(
+            cleaned.cols(),
+            cleaned.rows(),
             Bitmap.Config.ARGB_8888
         )
-
-        Utils.matToBitmap(morphed, outputBitmap)
-
-        src.release()
-        hsv.release()
+        Utils.matToBitmap(cleaned, resultBitmap)
+        
+        // Cleanup
+        mat.release()
         gray.release()
-        filtered.release()
-        enhanced.release()
-        threshold.release()
-        inverted.release()
+        bestResult.release()
+        cleaned.release()
         kernel.release()
-        morphed.release()
-
-        return outputBitmap
+        
+        return resultBitmap
+    }
+    
+    /**
+     * Evaluate threshold quality based on text-like characteristics
+     * Returns a score between 0.0 (poor) and 1.0 (excellent)
+     */
+    private fun evaluateThreshold(mat: Mat): Double {
+        // Calculate score based on:
+        // 1. Number of white pixels (should be moderate, not too many/few)
+        // 2. Distribution of white pixels (should have some clustering for text)
+        
+        val totalPixels = (mat.rows() * mat.cols()).toDouble()
+        val whitePixels = Core.countNonZero(mat).toDouble()
+        val whiteRatio = whitePixels / totalPixels
+        
+        // Ideal white ratio for text: 10-30%
+        val ratioScore = when {
+            whiteRatio < 0.05 -> 0.0  // Too little text
+            whiteRatio > 0.40 -> 0.0  // Too much noise
+            whiteRatio in 0.10..0.30 -> 1.0  // Ideal range
+            else -> 0.5  // Acceptable but not ideal
+        }
+        
+        // Edge density as a proxy for text clarity
+        val edges = Mat()
+        Imgproc.Canny(mat, edges, 50.0, 150.0)
+        val edgePixels = Core.countNonZero(edges).toDouble()
+        val edgeScore = (edgePixels / totalPixels).coerceIn(0.0, 1.0)
+        edges.release()
+        
+        // Combined score
+        return ratioScore * 0.7 + edgeScore * 0.3
     }
     private fun computeContrast(mat: Mat): Double {
         val mean = MatOfDouble()

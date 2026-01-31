@@ -33,6 +33,7 @@ class RecordDetailActivity : AppCompatActivity() {
     private lateinit var recordsManager: RecordsManager
     private lateinit var testRecord: TestRecord
     private lateinit var sharePdfButton: Button
+    private lateinit var downloadPdfButton: Button
     private val dateFormat = SimpleDateFormat("MMM dd, yyyy 'at' h:mm a", Locale.getDefault())
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -74,6 +75,8 @@ class RecordDetailActivity : AppCompatActivity() {
         val dateDetailText = findViewById<TextView>(R.id.dateDetailText)
         val confidenceLayout = findViewById<LinearLayout>(R.id.confidenceLayout)
         val confidenceDetailText = findViewById<TextView>(R.id.confidenceDetailText)
+        val locationLayout = findViewById<LinearLayout>(R.id.locationLayout)
+        val locationDetailText = findViewById<TextView>(R.id.locationDetailText)
         val rawOcrText = findViewById<TextView>(R.id.rawOcrText)
         val deleteButton = findViewById<Button>(R.id.deleteButton)
         
@@ -116,6 +119,16 @@ class RecordDetailActivity : AppCompatActivity() {
             confidenceLayout.visibility = View.GONE
         }
         
+        // Set location (hide if not available)
+        if (testRecord.latitude != null && testRecord.longitude != null) {
+            val lat = String.format("%.6f", testRecord.latitude)
+            val lon = String.format("%.6f", testRecord.longitude)
+            locationDetailText.text = "$lat, $lon"
+            locationLayout.visibility = View.VISIBLE
+        } else {
+            locationLayout.visibility = View.GONE
+        }
+        
         // Set raw OCR text
         rawOcrText.text = testRecord.rawOcrText
         
@@ -124,10 +137,26 @@ class RecordDetailActivity : AppCompatActivity() {
             showDeleteConfirmation()
         }
         
+        // Setup download PDF button
+        downloadPdfButton = findViewById(R.id.downloadPdfButton)
+        downloadPdfButton.setOnClickListener {
+            downloadPdf()
+        }
+        
         // Setup PDF share button
         sharePdfButton = findViewById(R.id.sharePdfButton)
         sharePdfButton.setOnClickListener {
             createAndSharePdf()
+        }
+    }
+    
+    private fun downloadPdf() {
+        try {
+            val pdfFile = createPdfReport()
+            Toast.makeText(this, "PDF saved to app storage", Toast.LENGTH_LONG).show()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(this, "Failed to download PDF: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
     
@@ -217,6 +246,14 @@ class RecordDetailActivity : AppCompatActivity() {
         testRecord.confidence?.let { confidence ->
             infoTable.addCell(Cell().add(Paragraph("Confidence:").setBold()))
             infoTable.addCell(Cell().add(Paragraph("${(confidence * 100).toInt()}%")))
+        }
+        
+        // Add GPS location if available
+        if (testRecord.latitude != null && testRecord.longitude != null) {
+            infoTable.addCell(Cell().add(Paragraph("Location:").setBold()))
+            val lat = String.format("%.6f", testRecord.latitude)
+            val lon = String.format("%.6f", testRecord.longitude)
+            infoTable.addCell(Cell().add(Paragraph("$lat, $lon")))
         }
         
         document.add(infoTable)

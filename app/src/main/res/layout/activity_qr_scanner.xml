@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/black">
+
+    <androidx.camera.view.PreviewView
+        android:id="@+id/previewView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:implementationMode="performance"
+        app:scaleType="fillCenter" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:paddingTop="64dp"
+        android:paddingBottom="80dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Scan Device QR Code"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="@android:color/white"
+            android:gravity="center"
+            android:padding="16dp"
+            android:background="#80000000" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <!-- Scanning frame overlay -->
+        <View
+            android:layout_width="300dp"
+            android:layout_height="300dp"
+            android:layout_gravity="center"
+            android:background="@android:color/transparent"
+            android:layout_marginBottom="16dp" />
+
+        <TextView
+            android:id="@+id/scanStatusText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Position QR code within frame"
+            android:textSize="16sp"
+            android:textColor="@android:color/white"
+            android:gravity="center"
+            android:padding="16dp"
+            android:background="#80000000" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <Button
+            android:id="@+id/cancelButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Cancel"
+            android:textColor="@android:color/white"
+            android:backgroundTint="@android:color/holo_red_dark"
+            android:layout_margin="16dp"
+            style="@style/Widget.Material3.Button" />
+
+    </LinearLayout>
+
+</FrameLayout>

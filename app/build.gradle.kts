@@ -55,6 +55,12 @@ dependencies {
     // ML Kit Text Recognition
     implementation("com.google.mlkit:text-recognition:16.0.0")
     
+    // ML Kit Barcode Scanning
+    implementation("com.google.mlkit:barcode-scanning:17.2.0")
+    
+    // Google Play Services for Location
+    implementation("com.google.android.gms:play-services-location:21.0.1")
+    
     // Coroutines for async processing
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     

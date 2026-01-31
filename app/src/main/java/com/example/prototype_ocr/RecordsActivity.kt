@@ -11,6 +11,7 @@ import com.example.prototype_ocr.data.RecordsManager
 import com.example.prototype_ocr.data.RecordListItem
 import com.example.prototype_ocr.data.TestType
 import com.example.prototype_ocr.data.TestRecord
+import com.google.android.material.tabs.TabLayout
 import java.io.File
 
 class RecordsActivity : AppCompatActivity() {
@@ -19,6 +20,7 @@ class RecordsActivity : AppCompatActivity() {
     private lateinit var recordsAdapter: GroupedRecordsAdapter
     private lateinit var recordsRecyclerView: RecyclerView
     private lateinit var emptyStateText: TextView
+    private lateinit var tabLayout: TabLayout
     
     // State management for expand/collapse
     private val expandedMonths = mutableSetOf<String>()
@@ -33,6 +35,10 @@ class RecordsActivity : AppCompatActivity() {
         recordsManager = RecordsManager(this)
         recordsRecyclerView = findViewById(R.id.recordsRecyclerView)
         emptyStateText = findViewById(R.id.emptyStateText)
+        tabLayout = findViewById(R.id.tabLayout)
+        
+        // Setup tabs
+        setupTabs()
         
         // Setup RecyclerView
         val imageDir = File(filesDir, "lcd_images")
@@ -58,6 +64,49 @@ class RecordsActivity : AppCompatActivity() {
         
         // Load records
         loadRecords()
+    }
+    
+    private fun setupTabs() {
+        // Tabs are defined in XML, just add listener
+        tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab?) {
+                when (tab?.position) {
+                    0 -> showTestRecords()
+                    1 -> showPastUploads()
+                }
+            }
+            
+            override fun onTabUnselected(tab: TabLayout.Tab?) {}
+            override fun onTabReselected(tab: TabLayout.Tab?) {}
+        })
+    }
+    
+    private fun showTestRecords() {
+        recordsRecyclerView.visibility = View.VISIBLE
+        loadRecords()
+    }
+    
+    private fun showPastUploads() {
+        // Show past uploads in the same activity
+        val uploadManager = com.example.prototype_ocr.data.UploadManager(this)
+        val uploads = uploadManager.getAllUploads().sortedByDescending { it.uploadTimestamp }
+        
+        if (uploads.isEmpty()) {
+            recordsRecyclerView.visibility = View.GONE
+            emptyStateText.visibility = View.VISIBLE
+            emptyStateText.text = "No past uploads found.\nCreate your first upload from the home page!"
+        } else {
+            recordsRecyclerView.visibility = View.VISIBLE
+            emptyStateText.visibility = View.GONE
+            
+            val pastUploadsAdapter = PastUploadsAdapter { upload ->
+                val intent = Intent(this, UploadDetailActivity::class.java)
+                intent.putExtra("upload_id", upload.id)
+                startActivity(intent)
+            }
+            pastUploadsAdapter.updateUploads(uploads)
+            recordsRecyclerView.adapter = pastUploadsAdapter
+        }
     }
     
     override fun onResume() {

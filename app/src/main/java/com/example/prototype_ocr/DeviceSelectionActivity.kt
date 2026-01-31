@@ -1,13 +1,40 @@
 package com.example.prototype_ocr
 
+import android.app.Activity
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.os.Bundle
+import android.view.View
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import android.widget.Button
+import android.widget.Spinner
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.example.prototype_ocr.data.DeviceType
 
 class DeviceSelectionActivity : AppCompatActivity() {
+    
+    private lateinit var deviceSpinner: Spinner
+    private lateinit var scanDeviceButton: Button
+    private lateinit var uploadRecordsButton: Button
+    private lateinit var viewRecordsButton: Button
+    private var selectedDevice = DeviceType.HORIBA
+    
+    private val qrScannerLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val qrCode = result.data?.getStringExtra(QrScannerActivity.EXTRA_QR_CODE)
+            if (qrCode != null) {
+                // Open upload selection with QR code
+                val intent = Intent(this, UploadSelectionActivity::class.java)
+                intent.putExtra("device_id", qrCode)
+                startActivity(intent)
+            }
+        }
+    }
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -17,16 +44,39 @@ class DeviceSelectionActivity : AppCompatActivity() {
         
         setContentView(R.layout.activity_device_selection)
         
-        val horibaButton: Button = findViewById(R.id.horibaButton)
-        val robonikButton: Button = findViewById(R.id.robonikButton)
-        val viewRecordsButton: Button = findViewById(R.id.viewRecordsButton)
+        deviceSpinner = findViewById(R.id.deviceSpinner)
+        scanDeviceButton = findViewById(R.id.scanDeviceButton)
+        uploadRecordsButton = findViewById(R.id.uploadRecordsButton)
+        viewRecordsButton = findViewById(R.id.viewRecordsButton)
         
-        horibaButton.setOnClickListener {
-            openCamera(DeviceType.HORIBA)
+        // Setup device spinner
+        val devices = listOf("Horiba", "Robonik")
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, devices)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        deviceSpinner.adapter = adapter
+        
+        deviceSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                selectedDevice = when (position) {
+                    0 -> DeviceType.HORIBA
+                    1 -> DeviceType.ROBONIK
+                    else -> DeviceType.HORIBA
+                }
+            }
+            
+            override fun onNothingSelected(parent: AdapterView<*>?) {
+                selectedDevice = DeviceType.HORIBA
+            }
         }
         
-        robonikButton.setOnClickListener {
-            openCamera(DeviceType.ROBONIK)
+        scanDeviceButton.setOnClickListener {
+            openCamera(selectedDevice)
+        }
+        
+        uploadRecordsButton.setOnClickListener {
+            // Open QR scanner first
+            val intent = Intent(this, QrScannerActivity::class.java)
+            qrScannerLauncher.launch(intent)
         }
         
         viewRecordsButton.setOnClickListener {

@@ -3,6 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <application
         android:allowBackup="true"
@@ -14,9 +16,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Prototype_ocr">
         
-        <!-- Device Selection Home Page -->
+        <!-- User Details Home Page -->
         <activity
-            android:name=".DeviceSelectionActivity"
+            android:name=".UserDetailsActivity"
             android:exported="true"
             android:screenOrientation="portrait">
             <intent-filter>
@@ -26,8 +28,34 @@
             </intent-filter>
         </activity>
         
+        <!-- Device Selection Page -->
+        <activity
+            android:name=".DeviceSelectionActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+        
         <activity
             android:name=".RecordsActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+            
+        <activity
+            android:name=".UploadSelectionActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+            
+        <activity
+            android:name=".QrScannerActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+            
+        <activity
+            android:name=".PastUploadsActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+            
+        <activity
+            android:name=".UploadDetailActivity"
             android:exported="false"
             android:screenOrientation="portrait" />
             

@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    app:cardElevation="4dp"
+    app:cardCornerRadius="8dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/uploadMonthText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="January 2024"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="?attr/colorPrimary" />
+
+            <TextView
+                android:id="@+id/uploadDeviceIdText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="DPHS-1"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="@android:color/holo_blue_dark"
+                android:background="@drawable/rounded_border"
+                android:padding="6dp" />
+
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/uploadDateText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Uploaded on 15 Jan 2024, 10:30 AM"
+            android:textSize="14sp"
+            android:textColor="@android:color/darker_gray"
+            android:layout_marginTop="4dp" />
+
+        <TextView
+            android:id="@+id/uploadTestCountText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="6 test records"
+            android:textSize="14sp"
+            android:layout_marginTop="8dp" />
+
+        <TextView
+            android:id="@+id/uploadSummaryText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Glucose (2) • Creatinine (2) • Cholesterol (2)"
+            android:textSize="12sp"
+            android:textColor="@android:color/darker_gray"
+            android:layout_marginTop="4dp" />
+
+        <Button
+            android:id="@+id/shareButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Share via WhatsApp"
+            android:textSize="12sp"
+            android:layout_marginTop="8dp"
+            style="@style/Widget.Material3.Button.OutlinedButton" />
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

@@ -3,7 +3,10 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:paddingStart="16dp"
+    android:paddingEnd="16dp"
+    android:paddingTop="64dp"
+    android:paddingBottom="80dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -120,6 +123,29 @@
 
         </LinearLayout>
 
+        <LinearLayout
+            android:id="@+id/locationLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Location: "
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/locationDetailText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="GPS coordinates"
+                android:textSize="16sp" />
+
+        </LinearLayout>
+
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -149,11 +175,21 @@
         </ScrollView>
 
         <Button
+            android:id="@+id/downloadPdfButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="Download PDF"
+            android:textColor="@android:color/white"
+            android:backgroundTint="@android:color/holo_purple"
+            style="@style/Widget.Material3.Button" />
+
+        <Button
             android:id="@+id/sharePdfButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
-            android:text="Upload/Share Record"
+            android:text="Share Record"
             android:textColor="@android:color/white"
             android:backgroundTint="@android:color/holo_green_dark"
             style="@style/Widget.Material3.Button" />
