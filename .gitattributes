@@ -1,0 +1,4 @@
+opencv/native/libs/**/*.so filter=lfs diff=lfs merge=lfs -text
+opencv/native/staticlibs/**/*.a filter=lfs diff=lfs merge=lfs -text
+opencv/native/3rdparty/libs/**/*.a filter=lfs diff=lfs merge=lfs -text
+**/gradle-wrapper.jar filter=lfs diff=lfs merge=lfs -text

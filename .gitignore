@@ -1,0 +1,25 @@
+# IDE files
+*.iml
+.idea/
+.DS_Store
+
+# Gradle
+.gradle/
+build/
+*/build/
+
+# Local properties
+# This file should not be committed to version control.
+local.properties
+
+# Android
+captures/
+
+# Native build
+.externalNativeBuild/
+.cxx/
+
+# OpenCV module
+opencv/build/
+opencv/.cxx/
+opencv/java/javadoc/

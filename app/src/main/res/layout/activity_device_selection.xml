@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="32dp"
+    android:background="@android:color/white">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Medical Device OCR"
+        android:textSize="32sp"
+        android:textStyle="bold"
+        android:textColor="@android:color/black"
+        android:layout_marginBottom="16dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Select Your Device"
+        android:textSize="20sp"
+        android:textColor="@android:color/darker_gray"
+        android:layout_marginBottom="48dp" />
+
+    <Button
+        android:id="@+id/horibaButton"
+        android:layout_width="match_parent"
+        android:layout_height="80dp"
+        android:text="Horiba"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:backgroundTint="@android:color/holo_blue_dark"
+        android:layout_marginBottom="24dp"
+        style="@style/Widget.Material3.Button" />
+
+    <Button
+        android:id="@+id/robonikButton"
+        android:layout_width="match_parent"
+        android:layout_height="80dp"
+        android:text="Robonik"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:backgroundTint="@android:color/holo_green_dark"
+        android:layout_marginBottom="48dp"
+        style="@style/Widget.Material3.Button" />
+
+    <Button
+        android:id="@+id/viewRecordsButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="View Test Records"
+        android:textSize="18sp"
+        android:backgroundTint="@android:color/darker_gray"
+        style="@style/Widget.Material3.Button.OutlinedButton" />
+
+</LinearLayout>

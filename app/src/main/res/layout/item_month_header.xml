@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="16dp"
+    android:layout_marginTop="8dp"
+    android:background="?android:attr/selectableItemBackground"
+    android:clickable="true">
+
+    <TextView
+        android:id="@+id/monthHeaderText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="January 2026"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="@android:color/black"
+        android:gravity="center" />
+
+    <ImageView
+        android:id="@+id/monthExpandIcon"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:layout_gravity="center_vertical"
+        android:src="@android:drawable/arrow_down_float"
+        android:layout_marginStart="8dp" />
+
+</LinearLayout>
