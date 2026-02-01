@@ -52,7 +52,7 @@ class UploadDetailActivity : AppCompatActivity() {
     
     private fun setupViews() {
         val monthText = findViewById<TextView>(R.id.uploadMonthText)
-        val deviceIdText = findViewById<TextView>(R.id.uploadDeviceIdText)
+        val userNameText = findViewById<TextView>(R.id.uploadDeviceIdText)  // Reusing ID for user name
         val dateText = findViewById<TextView>(R.id.uploadDateText)
         val testCountText = findViewById<TextView>(R.id.uploadTestCountText)
         val locationText = findViewById<TextView>(R.id.uploadLocationText)
@@ -66,8 +66,8 @@ class UploadDetailActivity : AppCompatActivity() {
         val deleteButton = findViewById<Button>(R.id.deleteUploadButton)
         
         // Set title and info
-        monthText.text = upload.monthName
-        deviceIdText.text = upload.deviceId
+        monthText.text = "${upload.panelId} - ${upload.monthName}"
+        userNameText.text = "${upload.userName}\n${upload.phcName}"
         dateText.text = dateFormat.format(Date(upload.uploadTimestamp))
         testCountText.text = "${upload.getRecordCount()} records"
         
@@ -158,7 +158,7 @@ class UploadDetailActivity : AppCompatActivity() {
             action = Intent.ACTION_SEND
             type = "application/pdf"
             putExtra(Intent.EXTRA_STREAM, pdfUri)
-            putExtra(Intent.EXTRA_TEXT, "Medical Test Upload - ${upload.monthName}")
+            putExtra(Intent.EXTRA_TEXT, "Medical Test Upload - Panel: ${upload.panelId} | ${upload.monthName} (${upload.userName})")
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
         

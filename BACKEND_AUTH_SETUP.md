@@ -3,11 +3,13 @@
 ---
 
 ## Context
-You are working on the **Node.js/Express backend** for the Medical Device OCR app. The Android app now has login functionality, and you need to implement user authentication endpoints.
+You are working on the **Node.js/Express backend** for the Medical Device OCR app. The Android app now uses a **dual identification system**:
+1. **Panel ID** (from QR scan): Identifies the testing device/panel (e.g., "DPHS-1", "DPHS-2")
+2. **User Details** (from login): Identifies the healthcare worker performing tests
 
 ## Current Backend Status
 - **Base URL**: `http://192.168.1.103:3000`
-- **Existing Endpoint**: `POST /api/upload` (for test data uploads) ✅
+- **Existing Endpoint**: `POST /api/upload` (for test data uploads) ✅ **NEEDS UPDATE for panelId**
 - **Server Port**: 3000
 
 ## Required Implementation
@@ -38,8 +40,10 @@ You are working on the **Node.js/Express backend** for the Medical Device OCR ap
       "role": "Health Worker",
       "email": "rajesh.kumar@dpha.tn.gov.in",
       "phoneNumber": "+91 9876543210",
-      "healthCenter": "Primary Health Center - Chennai North",
-      "district": "Chennai",
+      "phcName": "Primary Health Center - Chennai North",
+      "hubName": "Zone 3 Hub",
+      "blockName": "Teynampet Block",
+      "districtName": "Chennai",
       "state": "Tamil Nadu"
     }
   },
@@ -97,8 +101,10 @@ Please create these three users in your database:
   role: "Health Worker",
   email: "rajesh.kumar@dpha.tn.gov.in",
   phoneNumber: "+91 9876543210",
-  healthCenter: "Primary Health Center - Chennai North",
-  district: "Chennai",
+  phcName: "Primary Health Center - Chennai North",
+  hubName: "Zone 3 Hub",
+  blockName: "Teynampet Block",
+  districtName: "Chennai",
   state: "Tamil Nadu"
 }
 ```
@@ -113,8 +119,10 @@ Please create these three users in your database:
   role: "Lab Technician",
   email: "priya.sharma@dpha.tn.gov.in",
   phoneNumber: "+91 9876543211",
-  healthCenter: "District Hospital - Coimbatore",
-  district: "Coimbatore",
+  phcName: "District Hospital - Coimbatore",
+  hubName: "Zone 5 Hub",
+  blockName: "RS Puram Block",
+  districtName: "Coimbatore",
   state: "Tamil Nadu"
 }
 ```
@@ -129,8 +137,10 @@ Please create these three users in your database:
   role: "Administrator",
   email: "suresh.babu@dpha.tn.gov.in",
   phoneNumber: "+91 9876543212",
-  healthCenter: "Directorate of Public Health",
-  district: "Chennai",
+  phcName: "Directorate of Public Health",
+  hubName: "Central Hub",
+  blockName: "HQ Block",
+  districtName: "Chennai",
   state: "Tamil Nadu"
 }
 ```
@@ -225,12 +235,35 @@ After implementation, test with:
 
 ### 7. Integration with Existing Upload Endpoint
 
-The `/api/upload` endpoint already exists. Later, you can:
-1. Add user authentication middleware
-2. Associate uploads with logged-in users
-3. Add `userId` field to upload records
+⚠️ **CRITICAL UPDATE REQUIRED**: The `/api/upload` endpoint needs modification.
 
-For now, the upload endpoint can remain as-is without authentication.
+**Upload Request Now Includes**:
+1. **panelId** (from QR scan) - "DPHS-1", "DPHS-2", etc.
+2. **User Details** (from login) - userId, userName, phcName, hubName, blockName, districtName
+
+**Updated UploadInfo Structure**:
+```json
+{
+  "id": "upload-uuid",
+  "timestamp": 1738339800000,
+  "latitude": 11.0168,
+  "longitude": 76.9558,
+  "panelId": "DPHS-1",
+  "userId": "user-001",
+  "userName": "Dr. Rajesh Kumar",
+  "phcName": "Primary Health Center - Chennai North",
+  "hubName": "Zone 3 Hub",
+  "blockName": "Teynampet Block",
+  "districtName": "Chennai",
+  "monthName": "February 2026"
+}
+```
+
+**Required Backend Changes**:
+1. Update upload endpoint to accept both `panelId` and user fields
+2. Store panelId with each upload record
+3. Return panelId in UploadResponse
+4. Index uploads by both panelId and userId for queries
 
 ### 8. Error Handling
 

@@ -40,15 +40,15 @@ class PastUploadsAdapter(
     
     inner class UploadViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val monthNameText: TextView = itemView.findViewById(R.id.uploadMonthText)
-        private val deviceIdText: TextView = itemView.findViewById(R.id.uploadDeviceIdText)
+        private val userNameText: TextView = itemView.findViewById(R.id.uploadDeviceIdText)  // Reusing ID for user name
         private val dateText: TextView = itemView.findViewById(R.id.uploadDateText)
         private val testCountText: TextView = itemView.findViewById(R.id.uploadTestCountText)
         private val summaryText: TextView = itemView.findViewById(R.id.uploadSummaryText)
         private val shareButton: Button = itemView.findViewById(R.id.shareButton)
         
         fun bind(upload: Upload) {
-            monthNameText.text = upload.monthName
-            deviceIdText.text = upload.deviceId
+            monthNameText.text = "${upload.panelId} - ${upload.monthName}"
+            userNameText.text = upload.userName
             dateText.text = "Uploaded on ${dateFormat.format(Date(upload.uploadTimestamp))}"
             testCountText.text = "${upload.getRecordCount()} test records"
             
@@ -96,7 +96,7 @@ class PastUploadsAdapter(
                 type = "application/pdf"
                 setPackage("com.whatsapp")
                 putExtra(Intent.EXTRA_STREAM, pdfUri)
-                putExtra(Intent.EXTRA_TEXT, "Medical Test Upload - ${upload.monthName} (${upload.deviceId})")
+                putExtra(Intent.EXTRA_TEXT, "Medical Test Upload - Panel: ${upload.panelId} | ${upload.monthName} (${upload.userName})")
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
             

@@ -2,6 +2,7 @@ package com.example.prototype_ocr.api
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -13,6 +14,7 @@ class AuthRepository(private val context: Context) {
     private val api = ApiClient.api
     
     companion object {
+        private const val TAG = "AuthRepository"
         private const val KEY_IS_LOGGED_IN = "is_logged_in"
         private const val KEY_USER_DATA = "user_data"
         private const val KEY_TOKEN = "token"
@@ -46,30 +48,55 @@ class AuthRepository(private val context: Context) {
     private suspend fun loginOnline(username: String, password: String): Result<UserData> {
         return try {
             val request = LoginRequest(username, password)
+            Log.d(TAG, "Sending login request for: $username")
+            
             val response = api.login(request)
+            
+            Log.d(TAG, "Response code: ${response.code()}")
+            Log.d(TAG, "Response successful: ${response.isSuccessful}")
+            Log.d(TAG, "Response body: ${response.body()}")
             
             if (response.isSuccessful && response.body()?.success == true) {
                 val loginResponse = response.body()?.data
                 if (loginResponse != null) {
+                    val user = loginResponse.user
+                    
+                    // Log exactly what backend sent
+                    Log.d(TAG, "=== BACKEND RESPONSE DATA ===")
+                    Log.d(TAG, "Raw JSON: ${gson.toJson(user)}")
+                    Log.d(TAG, "User ID: '${user.id}'")
+                    Log.d(TAG, "User Name: '${user.name}'")
+                    Log.d(TAG, "PHC Name from backend: '${user.phcName}'")
+                    Log.d(TAG, "Hub Name from backend: '${user.hubName}'")
+                    Log.d(TAG, "Block Name from backend: '${user.blockName}'")
+                    Log.d(TAG, "District Name from backend: '${user.districtName}'")
+                    Log.d(TAG, "State from backend: '${user.state}'")
+                    Log.d(TAG, "===========================")
+                    
                     // Save user data and credentials
-                    saveUserData(loginResponse.user)
+                    saveUserData(user)
                     saveToken(loginResponse.token)
                     saveCredentials(username, password)
-                    Result.success<UserData>(loginResponse.user)
+                    
+                    Log.d(TAG, "User data saved successfully")
+                    Result.success<UserData>(user)
                 } else {
+                    Log.e(TAG, "Login response data is null")
                     Result.failure<UserData>(Exception("Invalid response from server"))
                 }
             } else {
                 val errorMsg = response.body()?.message ?: "Login failed"
+                Log.e(TAG, "Login failed: $errorMsg")
                 Result.failure<UserData>(Exception(errorMsg))
             }
         } catch (e: Exception) {
+            Log.e(TAG, "Login exception", e)
             Result.failure<UserData>(Exception("Network error: ${e.message}"))
         }
     }
     
     /**
-     * Offline login - verify against cached credentials
+     * Offline login - verify cached credentials
      */
     private fun loginOffline(username: String, password: String): Result<UserData> {
         val savedUsername = prefs.getString(KEY_USERNAME, null)
@@ -93,10 +120,13 @@ class AuthRepository(private val context: Context) {
      */
     private fun saveUserData(userData: UserData) {
         val userJson = gson.toJson(userData)
+        Log.d(TAG, "Saving user data to SharedPreferences:")
+        Log.d(TAG, "JSON being saved: $userJson")
         prefs.edit()
             .putString(KEY_USER_DATA, userJson)
             .putBoolean(KEY_IS_LOGGED_IN, true)
             .apply()
+        Log.d(TAG, "User data saved to SharedPreferences")
     }
     
     /**
@@ -138,10 +168,26 @@ class AuthRepository(private val context: Context) {
      * Get cached user data
      */
     fun getCachedUserData(): UserData? {
-        val userJson = prefs.getString(KEY_USER_DATA, null) ?: return null
+        val userJson = prefs.getString(KEY_USER_DATA, null)
+        Log.d(TAG, "Retrieving cached user data")
+        Log.d(TAG, "Cached JSON: $userJson")
+        
+        if (userJson == null) {
+            Log.w(TAG, "No cached user data found")
+            return null
+        }
+        
         return try {
-            gson.fromJson(userJson, UserData::class.java)
+            val userData = gson.fromJson(userJson, UserData::class.java)
+            Log.d(TAG, "=== CACHED USER DATA ===")
+            Log.d(TAG, "PHC Name from cache: '${userData.phcName}'")
+            Log.d(TAG, "Hub Name from cache: '${userData.hubName}'")
+            Log.d(TAG, "Block Name from cache: '${userData.blockName}'")
+            Log.d(TAG, "District Name from cache: '${userData.districtName}'")
+            Log.d(TAG, "=======================")
+            userData
         } catch (e: Exception) {
+            Log.e(TAG, "Error parsing cached user data", e)
             null
         }
     }

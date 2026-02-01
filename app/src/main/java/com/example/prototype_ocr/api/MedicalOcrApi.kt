@@ -34,7 +34,9 @@ interface MedicalOcrApi {
      */
     @GET("/api/uploads")
     suspend fun getUploads(
-        @Query("deviceId") deviceId: String? = null,
+        @Query("userId") userId: String? = null,
+        @Query("panelId") panelId: String? = null,
+        @Query("month") month: String? = null,
         @Query("startDate") startDate: Long? = null,
         @Query("endDate") endDate: Long? = null
     ): Response<ApiResponse<List<UploadResponse>>>
@@ -60,8 +62,7 @@ interface MedicalOcrApi {
      */
     @GET("/api/stats")
     suspend fun getStatistics(
-        @Query("deviceId") deviceId: String? = null,
-        @Query("startDate") startDate: Long? = null,
-        @Query("endDate") endDate: Long? = null
+        @Query("userId") userId: String? = null,
+        @Query("panelId") panelId: String? = null
     ): Response<ApiResponse<Map<String, Any>>>
 }

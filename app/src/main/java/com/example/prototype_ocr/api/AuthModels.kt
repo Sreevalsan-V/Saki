@@ -22,9 +22,14 @@ data class UserData(
     val role: String,
     val email: String?,
     val phoneNumber: String?,
-    val healthCenter: String?,
-    val district: String?,
-    val state: String?
+    @SerializedName("phcName") val phcName: String?,
+    @SerializedName("hubName") val hubName: String?,
+    @SerializedName("blockName") val blockName: String?,
+    @SerializedName("districtName") val districtName: String?,
+    val state: String?,
+    // Legacy fields from backend for backward compatibility
+    @SerializedName("healthCenter") val healthCenter: String?,
+    val district: String?
 )
 
 // Auth API Response wrapper

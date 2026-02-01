@@ -16,7 +16,15 @@ data class UploadInfo(
     val timestamp: Long,
     val latitude: Double?,
     val longitude: Double?,
-    val deviceId: String,
+    // Panel/Device ID from QR scan
+    val panelId: String,
+    // User details from login
+    val userId: String,
+    val userName: String,
+    val phcName: String,
+    val hubName: String,
+    val blockName: String,
+    val districtName: String,
     val monthName: String
 )
 
@@ -46,8 +54,16 @@ data class ApiResponse<T>(
 
 data class UploadResponse(
     val uploadId: String,
-    val deviceId: String,
+    val panelId: String,
+    val userId: String,
+    val userName: String,
+    val phcName: String,
+    @SerializedName("hubName") val hubName: String?,
+    @SerializedName("blockName") val blockName: String?,
+    @SerializedName("districtName") val districtName: String?,
     val uploadTime: String,
+    @SerializedName("uploadTimestamp") val uploadTimestamp: Long?,
+    @SerializedName("month") val month: String?,
     val uploadLocation: LocationData?,
     val pdfUrl: String,
     val testsCount: Int,
@@ -61,7 +77,9 @@ data class TestResponse(
     val value: Double?,
     val unit: String,
     val testTime: String,
+    @SerializedName("testTimestamp") val testTimestamp: Long?,
     val confidence: Float?,
+    @SerializedName("rawText") val rawText: String?,
     val imageUrl: String,
     val testLocation: LocationData?
 )

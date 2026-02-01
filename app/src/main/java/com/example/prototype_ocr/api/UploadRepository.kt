@@ -28,10 +28,44 @@ class UploadRepository(private val api: MedicalOcrApi = ApiClient.api) {
         pdfFile: File
     ): Result<UploadResponse> = withContext(Dispatchers.IO) {
         try {
-            // Validate device ID
-            if (!ApiUtils.isValidDeviceId(upload.deviceId)) {
+            // Validate panel ID and user details
+            if (!ApiUtils.validatePanelId(upload.panelId)) {
+                Log.e(TAG, "Invalid panel ID: ${upload.panelId}")
                 return@withContext Result.failure(
-                    IllegalArgumentException("Invalid device ID format. Must be DPHS-X (e.g., DPHS-1)")
+                    IllegalArgumentException("Invalid panel ID from QR scan")
+                )
+            }
+            
+            // Log user details for debugging
+            Log.d(TAG, "Upload validation - Panel: ${upload.panelId}")
+            Log.d(TAG, "User ID: '${upload.userId}'")
+            Log.d(TAG, "User Name: '${upload.userName}'")
+            Log.d(TAG, "PHC Name: '${upload.phcName}'")
+            Log.d(TAG, "Hub Name: '${upload.hubName}'")
+            Log.d(TAG, "Block Name: '${upload.blockName}'")
+            Log.d(TAG, "District Name: '${upload.districtName}'")
+            
+            if (!ApiUtils.validateUserDetails(
+                    upload.userId,
+                    upload.userName,
+                    upload.phcName,
+                    upload.hubName,
+                    upload.blockName,
+                    upload.districtName
+                )) {
+                // Build detailed error message
+                val missing = mutableListOf<String>()
+                if (upload.userId.isBlank()) missing.add("User ID")
+                if (upload.userName.isBlank()) missing.add("User Name")
+                if (upload.phcName.isBlank()) missing.add("PHC Name")
+                if (upload.hubName.isBlank()) missing.add("Hub Name")
+                if (upload.blockName.isBlank()) missing.add("Block Name")
+                if (upload.districtName.isBlank()) missing.add("District Name")
+                
+                val errorMsg = "Missing fields: ${missing.joinToString(", ")}"
+                Log.e(TAG, errorMsg)
+                return@withContext Result.failure(
+                    IllegalArgumentException("Missing user details. Please ensure your profile is complete. $errorMsg")
                 )
             }
             
@@ -51,7 +85,13 @@ class UploadRepository(private val api: MedicalOcrApi = ApiClient.api) {
                 timestamp = upload.uploadTimestamp,
                 latitude = upload.latitude,
                 longitude = upload.longitude,
-                deviceId = upload.deviceId,
+                panelId = upload.panelId,
+                userId = upload.userId,
+                userName = upload.userName,
+                phcName = upload.phcName,
+                hubName = upload.hubName,
+                blockName = upload.blockName,
+                districtName = upload.districtName,
                 monthName = upload.monthName
             )
             
@@ -106,7 +146,7 @@ class UploadRepository(private val api: MedicalOcrApi = ApiClient.api) {
                 pdfBase64 = pdfBase64
             )
             
-            Log.d(TAG, "Uploading to server: ${testInfoList.size} tests, device ${upload.deviceId}")
+            Log.d(TAG, "Uploading to server: ${testInfoList.size} tests, user ${upload.userName}")
             
             // Make API call
             val response = api.uploadTestRecords(request)
@@ -137,7 +177,13 @@ class UploadRepository(private val api: MedicalOcrApi = ApiClient.api) {
      * Simplified upload function that takes individual parameters
      */
     suspend fun uploadTestRecords(
-        deviceId: String,
+        panelId: String,
+        userId: String,
+        userName: String,
+        phcName: String,
+        hubName: String,
+        blockName: String,
+        districtName: String,
         currentLatitude: Double?,
         currentLongitude: Double?,
         testRecords: List<TestRecord>,
@@ -153,7 +199,13 @@ class UploadRepository(private val api: MedicalOcrApi = ApiClient.api) {
                 id = ApiUtils.generateUUID(),
                 uploadTimestamp = uploadTimestamp,
                 monthName = monthName,
-                deviceId = deviceId,
+                panelId = panelId,
+                userId = userId,
+                userName = userName,
+                phcName = phcName,
+                hubName = hubName,
+                blockName = blockName,
+                districtName = districtName,
                 glucoseRecord = testRecords.find { it.testType.name == "GLUCOSE" },
                 creatinineRecord = testRecords.find { it.testType.name == "CREATININE" },
                 cholesterolRecord = testRecords.find { it.testType.name == "CHOLESTEROL" },

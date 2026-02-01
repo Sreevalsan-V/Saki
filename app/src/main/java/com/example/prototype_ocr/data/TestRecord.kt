@@ -33,7 +33,16 @@ data class Upload(
     val id: String = java.util.UUID.randomUUID().toString(),
     val uploadTimestamp: Long,
     val monthName: String,
-    val deviceId: String, // QR code scanned ID like DPHS-1, DPHS-2
+    // Panel ID from QR scan (DPHS-1, DPHS-2, etc.)
+    val panelId: String,
+    // User details from login
+    val userId: String,
+    val userName: String,
+    val phcName: String,
+    val hubName: String,
+    val blockName: String,
+    val districtName: String,
+    // Test records
     val glucoseRecord: TestRecord?,
     val creatinineRecord: TestRecord?,
     val cholesterolRecord: TestRecord?,

@@ -11,7 +11,7 @@ Data classes for API communication:
 - **UploadInfo**: Upload metadata (id, timestamp, GPS, deviceId, monthName)
 - **TestInfo**: Individual test data (id, type, value, timestamp, GPS, image, OCR data)
 - **ApiResponse<T>**: Generic response wrapper
-- **UploadResponse**: Server success response with URLs
+- **UploadResponse**: Server success response with panelId and user info
 - **TestResponse**: Individual test in response
 - **LocationData**: GPS coordinates
 

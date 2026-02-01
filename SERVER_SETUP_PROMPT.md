@@ -13,7 +13,13 @@ Each upload contains:
 - **uploadTimestamp**: Long (milliseconds since epoch - when upload was created)
 - **uploadDateTime**: String (human-readable format: "31 Jan 2026 at 2:30 PM")
 - **monthName**: String (e.g., "January 2026")
-- **deviceId**: String (QR code scanned from device, format: "DPHS-1", "DPHS-2", etc.)
+- **panelId**: String (QR code scanned from device, format: "DPHS-1", "DPHS-2", etc.)
+- **userId**: String (authenticated user ID)
+- **userName**: String (healthcare worker name)
+- **phcName**: String (Primary Health Center name)
+- **hubName**: String (Hub/Zone name)
+- **blockName**: String (Block name)
+- **districtName**: String (District name)
 - **latitude**: Double (nullable, live GPS latitude at upload time)
 - **longitude**: Double (nullable, live GPS longitude at upload time)
 - **pdfFileName**: String (combined PDF file name)
@@ -65,14 +71,14 @@ Each individual test record contains:
   - **test-2-image** (File): Image of second test LCD display (if exists)
   - **test-3-image** (File): Image of third test LCD display (if exists)
 - Validate all required fields are present
-- Store files in organized directory structure: `/uploads/{deviceId}/{monthName}/{uploadId}/`
+- Store files in organized directory structure: `/uploads/{panelId}/{monthName}/{uploadId}/`
   - Save PDF as: `combined_report.pdf`
   - Save images as: `test-1.jpg`, `test-2.jpg`, `test-3.jpg`
 - Store complete metadata in database with all GPS and timestamp data
 - Return success/failure response with upload ID
 
 ### 2. GET /api/uploads
-- Query parameters: deviceId (optional), startDate, endDate
+- Query parameters: panelId (optional), userId (optional), startDate, endDate
 - Return complete upload metadata including:
   - Upload timestamp, datetime, and GPS coordinates
   - All test records with timestamps, GPS locations, and test names
@@ -91,7 +97,7 @@ Each individual test record contains:
 
 ### 5. GET /api/download/image/:id/:imageType
 - Stream individual test images (imageType: glucose, creatinine, cholesterol)
-s: deviceId, startDate, endDate
+- Query parameters: panelId, userId, startDate, endDate
 - Return statistics:
   - Total uploads per month
   - Average test values per test type
@@ -99,13 +105,14 @@ s: deviceId, startDate, endDate
   - Test frequency by location
   - Time patterns (hourly distribution of tests)
 ### 7. GET /api/stats
-- Query parameter: deviceId
+- Query parameter: panelId, userId (for authorization)
 - Return statistics:
    - Store all timestamp data (both Long and formatted datetime)
    - Store GPS coordinates for uploads and individual tests
-   - Index on deviceId, uploadTimestamp, monthName for efficient queries
+   - Index on panelId, userId, uploadTimestamp, monthName for efficient queries
+   - Support querying by panelId (device) or userId (healthcare worker)
 3. **File Storage**: Organize files in filesystem or use cloud storage (S3/Google Cloud Storage)
-   - Directory structure: `/uploads/{deviceId}/{monthName}/{uploadId}/`
+   - Directory structure: `/uploads/{panelId}/{monthName}/{uploadId}/`
    - Store PDF and all test images
 4. **Validation**: 
    - Validate device IDs match pattern "DPHS-\\d+"
@@ -171,7 +178,13 @@ Please create a complete, production-ready server with proper error handling, va
     "uploadTimestamp": 1738339800000,
     "uploadDateTime": "31 Jan 2026 at 2:30 PM",
     "monthName": "January 2026",
-    "deviceId": "DPHS-1",
+    "panelId": "DPHS-1",
+    "userId": "user-001",
+    "userName": "Dr. Rajesh Kumar",
+    "phcName": "Primary Health Center - Chennai North",
+    "hubName": "Zone 3 Hub",
+    "blockName": "Teynampet Block",
+    "districtName": "Chennai",
     "latitude": 13.082680,
     "longitude": 80.270721,
     "pdfFileName": "combined_upload_1738339800000.pdf"

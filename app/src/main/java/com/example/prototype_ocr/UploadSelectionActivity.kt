@@ -15,7 +15,9 @@ import androidx.core.app.ActivityCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.prototype_ocr.data.*
+import com.example.prototype_ocr.api.AuthRepository
 import com.example.prototype_ocr.api.ServerUploadHelper
+import com.example.prototype_ocr.api.UserData
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import java.io.File
@@ -28,6 +30,7 @@ class UploadSelectionActivity : AppCompatActivity() {
     private lateinit var uploadManager: UploadManager
     private lateinit var adapter: UploadSelectionAdapter
     private lateinit var emptyStateText: TextView
+    private lateinit var authRepository: AuthRepository
     private lateinit var uploadButton: Button
     private lateinit var currentMonthText: TextView
     private lateinit var fusedLocationClient: FusedLocationProviderClient
@@ -36,7 +39,8 @@ class UploadSelectionActivity : AppCompatActivity() {
     private var selectedCreatinine: TestRecord? = null
     private var selectedCholesterol: TestRecord? = null
     private var currentMonth: String = ""
-    private var deviceId: String = ""
+    private var userData: UserData? = null
+    private var panelId: String = ""
     
     companion object {
         private const val LOCATION_PERMISSION_REQUEST = 102
@@ -50,11 +54,20 @@ class UploadSelectionActivity : AppCompatActivity() {
         recordsManager = RecordsManager(this)
         uploadManager = UploadManager(this)
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        authRepository = AuthRepository(this)
         
-        // Get device ID from QR scan
-        deviceId = intent.getStringExtra("device_id") ?: ""
-        if (deviceId.isEmpty()) {
-            Toast.makeText(this, "No device ID provided", Toast.LENGTH_SHORT).show()
+        // Get panel ID from QR scan
+        panelId = intent.getStringExtra("device_id") ?: ""
+        if (panelId.isEmpty()) {
+            Toast.makeText(this, "No panel ID provided", Toast.LENGTH_SHORT).show()
+            finish()
+            return
+        }
+        
+        // Get user data from auth repository
+        userData = authRepository.getCachedUserData()
+        if (userData == null) {
+            Toast.makeText(this, "User not logged in", Toast.LENGTH_SHORT).show()
             finish()
             return
         }
@@ -66,7 +79,7 @@ class UploadSelectionActivity : AppCompatActivity() {
         // Get current month
         val monthFormat = SimpleDateFormat("MMMM yyyy", Locale.getDefault())
         currentMonth = monthFormat.format(Date())
-        currentMonthText.text = "Select tests for $currentMonth\nDevice: $deviceId"
+        currentMonthText.text = "Select tests for $currentMonth\nPanel: $panelId | User: ${userData!!.name}"
         
         // Setup RecyclerView
         val recyclerView = findViewById<RecyclerView>(R.id.uploadSelectionRecyclerView)
@@ -184,7 +197,10 @@ class UploadSelectionActivity : AppCompatActivity() {
     
     private fun showValidationDialog(location: Location?) {
         val message = buildString {
-            append("You have selected:\n\n")
+            append("Upload Summary:\n")
+            append("Panel: $panelId\n")
+            append("User: ${userData?.name}\n\n")
+            append("Selected Tests:\n\n")
             
             selectedGlucose?.let {
                 append("✓ Glucose: ${it.resultValue ?: "N/A"} ${TestType.GLUCOSE.unit}\n")
@@ -230,11 +246,20 @@ class UploadSelectionActivity : AppCompatActivity() {
         val latitude = location?.latitude
         val longitude = location?.longitude
         
-        // Create upload object with device ID and live GPS data
+        // Get user details
+        val user = userData!!
+        
+        // Create upload object with panel ID, user details and live GPS data
         val upload = Upload(
             uploadTimestamp = System.currentTimeMillis(),
             monthName = currentMonth,
-            deviceId = deviceId,
+            panelId = panelId,
+            userId = user.id,
+            userName = user.name,
+            phcName = user.phcName ?: "",
+            hubName = user.hubName ?: "",
+            blockName = user.blockName ?: "",
+            districtName = user.districtName ?: "",
             glucoseRecord = selectedGlucose,
             creatinineRecord = selectedCreatinine,
             cholesterolRecord = selectedCholesterol,
@@ -261,7 +286,7 @@ class UploadSelectionActivity : AppCompatActivity() {
             imagesDir = imagesDir,
             pdfFile = pdfFile,
             onLocalSaveOnly = {
-                Toast.makeText(this, "Upload saved locally for $deviceId", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "Upload saved locally for panel $panelId (${userData?.name})", Toast.LENGTH_LONG).show()
                 finish()
             },
             onServerUploadSuccess = { response ->

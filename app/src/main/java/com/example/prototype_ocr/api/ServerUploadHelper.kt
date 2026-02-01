@@ -104,7 +104,7 @@ object ServerUploadHelper {
     ) {
         AlertDialog.Builder(context)
             .setTitle("Upload Options")
-            .setMessage("Do you want to upload this data to the server?\n\nDevice: ${upload.deviceId}\nTests: ${upload.getRecordCount()}")
+            .setMessage("Do you want to upload this data to the server?\n\nPanel: ${upload.panelId}\nUser: ${upload.userName}\nPHC: ${upload.phcName}\nTests: ${upload.getRecordCount()}")
             .setPositiveButton("Upload to Server") { _, _ ->
                 uploadToServer(
                     context = context,
@@ -114,7 +114,7 @@ object ServerUploadHelper {
                     onSuccess = { response ->
                         AlertDialog.Builder(context)
                             .setTitle("Upload Successful")
-                            .setMessage("Upload ID: ${response.uploadId}\nDevice: ${response.deviceId}\nTests: ${response.testsCount}\n\nData saved locally and on server.")
+                            .setMessage("Upload ID: ${response.uploadId}\nPanel: ${response.panelId}\nUser: ${response.userName}\nPHC: ${response.phcName}\nTests: ${response.testsCount}\n\nData saved locally and on server.")
                             .setPositiveButton("OK") { _, _ ->
                                 onServerUploadSuccess(response)
                             }

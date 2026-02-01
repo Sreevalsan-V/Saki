@@ -41,12 +41,30 @@ object ApiUtils {
     }
     
     /**
-     * Validate device ID format (DPHS-X where X is a number)
-     * @param deviceId The device ID to validate
-     * @return true if valid, false otherwise
+     * Validate user details for upload
+     * @return true if all required fields are non-blank
      */
-    fun isValidDeviceId(deviceId: String): Boolean {
-        return deviceId.matches(Regex("DPHS-\\d+"))
+    fun validateUserDetails(
+        userId: String,
+        userName: String,
+        phcName: String,
+        hubName: String,
+        blockName: String,
+        districtName: String
+    ): Boolean {
+        return userId.isNotBlank() &&
+               userName.isNotBlank() &&
+               phcName.isNotBlank() &&
+               hubName.isNotBlank() &&
+               blockName.isNotBlank() &&
+               districtName.isNotBlank()
+    }
+    
+    /**
+     * Validate panel ID (from QR scan)
+     */
+    fun validatePanelId(panelId: String): Boolean {
+        return panelId.isNotBlank()
     }
     
     /**
