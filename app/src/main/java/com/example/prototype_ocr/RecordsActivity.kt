@@ -77,11 +77,21 @@ class RecordsActivity : AppCompatActivity() {
             }
             
             override fun onTabUnselected(tab: TabLayout.Tab?) {}
-            override fun onTabReselected(tab: TabLayout.Tab?) {}
+            override fun onTabReselected(tab: TabLayout.Tab?) {
+                // Handle reselection to navigate back when tapping the same tab
+                when (tab?.position) {
+                    0 -> showTestRecords()
+                    1 -> showPastUploads()
+                }
+            }
         })
     }
     
     private fun showTestRecords() {
+        // Restore the test records adapter if it was replaced
+        if (recordsRecyclerView.adapter != recordsAdapter) {
+            recordsRecyclerView.adapter = recordsAdapter
+        }
         recordsRecyclerView.visibility = View.VISIBLE
         loadRecords()
     }

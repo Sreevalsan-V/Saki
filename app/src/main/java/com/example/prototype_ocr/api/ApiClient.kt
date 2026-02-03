@@ -8,11 +8,9 @@ import java.util.concurrent.TimeUnit
 
 object ApiClient {
     
-    // Server Configuration
-    // For emulator: http://10.0.2.2:3000
-    // For real device (same network): http://192.168.1.103:3000 (your computer's local IP)
-    // For production: Your deployed server URL
-    private const val BASE_URL = "http://192.168.1.103:3000"  // ← Updated for real device
+    // Server URL now managed by ServerConfig
+    // Change server in ServerConfig.kt
+    private val BASE_URL = ServerConfig.baseUrl
     
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY

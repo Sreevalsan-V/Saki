@@ -234,7 +234,8 @@ class MLKitOcrEngine(private val deviceType: DeviceType = DeviceType.HORIBA) {
         Imgproc.cvtColor(mat, gray, Imgproc.COLOR_BGR2GRAY)
         
         // Try multiple threshold values and select the best result
-        val thresholdRange = 140..190 step 10
+//        val thresholdRange = 140..190 step 10
+        val thresholdRange = 140..170 step 10
         var bestResult: Mat? = null
         var bestScore = 0.0
         

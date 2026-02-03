@@ -149,6 +149,61 @@ class AuthRepository(private val context: Context) {
     }
     
     /**
+     * Refresh user data from server (silent background update)
+     */
+    suspend fun refreshUserData(): Result<UserData> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val token = getToken()
+                if (token == null) {
+                    Log.w(TAG, "No token available for refresh")
+                    return@withContext Result.failure<UserData>(Exception("Not logged in"))
+                }
+                
+                Log.d(TAG, "Refreshing user data from server...")
+                
+                val response = api.getCurrentUser("Bearer $token")
+                
+                if (response.isSuccessful && response.body()?.success == true) {
+                    val userData = response.body()?.data
+                    if (userData != null) {
+                        Log.d(TAG, "User data refreshed successfully")
+                        Log.d(TAG, "PHC: '${userData.phcName}', Hub: '${userData.hubName}', Block: '${userData.blockName}', District: '${userData.districtName}'")
+                        
+                        // Update cached data
+                        saveUserData(userData)
+                        
+                        Result.success(userData)
+                    } else {
+                        Result.failure<UserData>(Exception("No data in response"))
+                    }
+                } else {
+                    val errorMsg = response.body()?.message ?: "Failed to refresh"
+                    Log.e(TAG, "Refresh failed: $errorMsg")
+                    
+                    // Return cached data as fallback
+                    val cached = getCachedUserData()
+                    if (cached != null) {
+                        Result.success(cached)
+                    } else {
+                        Result.failure<UserData>(Exception(errorMsg))
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error refreshing user data", e)
+                
+                // Return cached data as fallback
+                val cached = getCachedUserData()
+                if (cached != null) {
+                    Result.success(cached)
+                } else {
+                    Result.failure<UserData>(e)
+                }
+            }
+        }
+    }
+    
+    /**
      * Simple password hashing (use BCrypt or similar in production)
      */
     private fun hashPassword(password: String): String {

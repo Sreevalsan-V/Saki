@@ -14,6 +14,14 @@ interface MedicalOcrApi {
     ): Response<AuthApiResponse<LoginResponse>>
     
     /**
+     * Get current user data (refresh profile)
+     */
+    @GET("/api/auth/me")
+    suspend fun getCurrentUser(
+        @Header("Authorization") token: String
+    ): Response<AuthApiResponse<UserData>>
+    
+    /**
      * Get user profile
      */
     @GET("/api/auth/profile")

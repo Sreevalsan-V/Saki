@@ -6,12 +6,14 @@ import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.prototype_ocr.data.*
@@ -20,6 +22,7 @@ import com.example.prototype_ocr.api.ServerUploadHelper
 import com.example.prototype_ocr.api.UserData
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
+import kotlinx.coroutines.launch
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -69,6 +72,25 @@ class UploadSelectionActivity : AppCompatActivity() {
         if (userData == null) {
             Toast.makeText(this, "User not logged in", Toast.LENGTH_SHORT).show()
             finish()
+            return
+        }
+        
+        // Validate user data has required fields
+        val missingFields = mutableListOf<String>()
+        if (userData!!.phcName.isNullOrBlank()) missingFields.add("PHC Name")
+        if (userData!!.hubName.isNullOrBlank()) missingFields.add("Hub Name")
+        if (userData!!.blockName.isNullOrBlank()) missingFields.add("Block Name")
+        if (userData!!.districtName.isNullOrBlank()) missingFields.add("District Name")
+        
+        if (missingFields.isNotEmpty()) {
+            AlertDialog.Builder(this)
+                .setTitle("Profile Incomplete")
+                .setMessage("Your profile is missing required fields:\n\n${missingFields.joinToString("\n")}\n\nPlease logout and login again to refresh your profile data.")
+                .setPositiveButton("OK") { _, _ ->
+                    finish()
+                }
+                .setCancelable(false)
+                .show()
             return
         }
         
@@ -228,6 +250,25 @@ class UploadSelectionActivity : AppCompatActivity() {
     }
     
     private fun createUpload(location: Location?) {
+        // Validate user details BEFORE creating upload
+        val user = userData!!
+        
+        // Check if any required user fields are missing
+        val missingFields = mutableListOf<String>()
+        if (user.phcName.isNullOrBlank()) missingFields.add("PHC Name")
+        if (user.hubName.isNullOrBlank()) missingFields.add("Hub Name")
+        if (user.blockName.isNullOrBlank()) missingFields.add("Block Name")
+        if (user.districtName.isNullOrBlank()) missingFields.add("District Name")
+        
+        if (missingFields.isNotEmpty()) {
+            AlertDialog.Builder(this)
+                .setTitle("Profile Incomplete")
+                .setMessage("Cannot upload: Missing required fields:\n\n${missingFields.joinToString("\n")}\n\nPlease update your profile with complete location details and try again.")
+                .setPositiveButton("OK", null)
+                .show()
+            return
+        }
+        
         // Generate PDF
         val pdfFile = CombinedPdfGenerator.createCombinedPdf(
             context = this,
@@ -246,10 +287,8 @@ class UploadSelectionActivity : AppCompatActivity() {
         val latitude = location?.latitude
         val longitude = location?.longitude
         
-        // Get user details
-        val user = userData!!
-        
         // Create upload object with panel ID, user details and live GPS data
+        // At this point we know all fields are non-null/non-empty due to validation above
         val upload = Upload(
             uploadTimestamp = System.currentTimeMillis(),
             monthName = currentMonth,

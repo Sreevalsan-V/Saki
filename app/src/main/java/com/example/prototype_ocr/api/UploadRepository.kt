@@ -107,8 +107,9 @@ class UploadRepository(private val api: MedicalOcrApi = ApiClient.api) {
                 // Convert bitmap to base64
                 val imageBase64 = ApiUtils.bitmapToBase64(bitmap, quality = 85)
                 
+                // Generate NEW ID for server (local test record IDs may already exist on server)
                 TestInfo(
-                    id = testRecord.id,
+                    id = ApiUtils.generateUUID(),
                     type = testRecord.testType.name, // "GLUCOSE", "CREATININE", "CHOLESTEROL"
                     value = testRecord.resultValue,
                     unit = testRecord.testType.unit,
