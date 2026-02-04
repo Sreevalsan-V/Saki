@@ -11,7 +11,6 @@ import java.util.regex.Pattern
 import org.opencv.android.Utils
 import org.opencv.core.Mat
 import org.opencv.core.Size
-import org.opencv.core.CvType
 import org.opencv.core.Core
 import org.opencv.imgproc.Imgproc
 import org.opencv.core.MatOfDouble
@@ -63,7 +62,7 @@ class MLKitOcrEngine(private val deviceType: DeviceType = DeviceType.HORIBA) {
         if (deviceType == DeviceType.HORIBA && useStripProcessing) {
             return processImageWithStrips(bitmap)
         }
-        
+
         // Original processing for Robonik or when strip processing is disabled
         return suspendCancellableCoroutine { continuation ->
             // Apply preprocessing to improve OCR accuracy
@@ -81,7 +80,7 @@ class MLKitOcrEngine(private val deviceType: DeviceType = DeviceType.HORIBA) {
                 }
         }
     }
-    
+
     /**
      * Process image using horizontal strips for better text ordering
      * Specifically for Horiba devices where text order matters
@@ -91,13 +90,13 @@ class MLKitOcrEngine(private val deviceType: DeviceType = DeviceType.HORIBA) {
         val stripHeight = preprocessedBitmap.height / HORIBA_STRIP_COUNT
         val stripResults = mutableListOf<StripOcrResult>()
         val allTextLines = mutableListOf<String>()
-        
+
         // Process each horizontal strip
         for (i in 0 until HORIBA_STRIP_COUNT) {
             val top = i * stripHeight
             val bottom = if (i == HORIBA_STRIP_COUNT - 1) preprocessedBitmap.height else (i + 1) * stripHeight
             val height = bottom - top
-            
+
             // Extract strip bitmap
             val stripBitmap = Bitmap.createBitmap(
                 preprocessedBitmap,
@@ -106,12 +105,12 @@ class MLKitOcrEngine(private val deviceType: DeviceType = DeviceType.HORIBA) {
                 preprocessedBitmap.width,
                 height
             )
-            
+
             // Process strip with OCR
-            val stripText = processStrip(stripBitmap, i)
+            val stripText = processStrip(stripBitmap)
             if (stripText.isNotEmpty()) {
                 allTextLines.add(stripText)
-                
+
                 // Try to find mg/dL value in this strip
                 val value = findMgDlValue(stripText)
                 stripResults.add(
@@ -123,16 +122,16 @@ class MLKitOcrEngine(private val deviceType: DeviceType = DeviceType.HORIBA) {
                     )
                 )
             }
-            
+
             stripBitmap.recycle()
         }
-        
+
         // Combine all strip texts in order
         val combinedText = allTextLines.joinToString("\n")
-        
+
         // Find the best mg/dL value from all strips
         val bestStrip = stripResults.firstOrNull { it.value != null }
-        
+
         val result = if (bestStrip != null) {
             val confidence = calculateConfidence(bestStrip.text, bestStrip.value!!)
             if (confidence >= 0.7f) {
@@ -159,22 +158,22 @@ class MLKitOcrEngine(private val deviceType: DeviceType = DeviceType.HORIBA) {
                 } else null
             } else null
         }
-        
+
         return Pair(result, combinedText)
     }
-    
+
     /**
      * Process a single horizontal strip and return detected text
      */
-    private suspend fun processStrip(stripBitmap: Bitmap, stripIndex: Int): String {
+    private suspend fun processStrip(stripBitmap: Bitmap): String {
         return suspendCancellableCoroutine { continuation ->
             val inputImage = InputImage.fromBitmap(stripBitmap, 0)
-            
+
             textRecognizer.process(inputImage)
                 .addOnSuccessListener { visionText ->
                     continuation.resume(visionText.text)
                 }
-                .addOnFailureListener { exception ->
+                .addOnFailureListener { _ ->
                     continuation.resume("") // Return empty string on failure
                 }
         }
@@ -185,7 +184,7 @@ class MLKitOcrEngine(private val deviceType: DeviceType = DeviceType.HORIBA) {
             DeviceType.ROBONIK -> preprocessRobonik(bitmap)
         }
     }
-    
+
     /**
      * Horiba preprocessing - Dark background with light text
      * Current logic for dark LCD with light/white text
@@ -219,7 +218,7 @@ class MLKitOcrEngine(private val deviceType: DeviceType = DeviceType.HORIBA) {
 
         return outputBitmap
     }
-    
+
     /**
      * Robonik preprocessing - Light blue background with dark blue text and white values
      * Optimized for light blue LCD with dark blue text and white numbers
@@ -228,44 +227,43 @@ class MLKitOcrEngine(private val deviceType: DeviceType = DeviceType.HORIBA) {
     private fun preprocessRobonik(bitmap: Bitmap): Bitmap {
         val mat = Mat()
         Utils.bitmapToMat(bitmap, mat)
-        
+
         // Convert to grayscale
         val gray = Mat()
         Imgproc.cvtColor(mat, gray, Imgproc.COLOR_BGR2GRAY)
-        
+
         // Try multiple threshold values and select the best result
-//        val thresholdRange = 140..190 step 10
         val thresholdRange = 140..170 step 10
         var bestResult: Mat? = null
         var bestScore = 0.0
-        
+
         for (threshold in thresholdRange) {
             val bw = Mat()
             Imgproc.threshold(gray, bw, threshold.toDouble(), 255.0, Imgproc.THRESH_BINARY)
-            
+
             // Invert: white text on black background for OCR
             val inverted = Mat()
             Core.bitwise_not(bw, inverted)
-            
+
             // Score based on text-like regions (white pixels in reasonable distribution)
             val score = evaluateThreshold(inverted)
-            
+
             if (score > bestScore) {
                 bestScore = score
                 bestResult?.release()
                 bestResult = inverted.clone()
             }
-            
+
             bw.release()
             inverted.release()
         }
-        
+
         // Apply morphological operations to clean up the best result
         val kernel = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, Size(2.0, 2.0))
         val cleaned = Mat()
         Imgproc.morphologyEx(bestResult!!, cleaned, Imgproc.MORPH_CLOSE, kernel)
         Imgproc.morphologyEx(cleaned, cleaned, Imgproc.MORPH_OPEN, kernel)
-        
+
         // Convert back to bitmap
         val resultBitmap = Bitmap.createBitmap(
             cleaned.cols(),
@@ -273,17 +271,17 @@ class MLKitOcrEngine(private val deviceType: DeviceType = DeviceType.HORIBA) {
             Bitmap.Config.ARGB_8888
         )
         Utils.matToBitmap(cleaned, resultBitmap)
-        
+
         // Cleanup
         mat.release()
         gray.release()
         bestResult.release()
         cleaned.release()
         kernel.release()
-        
+
         return resultBitmap
     }
-    
+
     /**
      * Evaluate threshold quality based on text-like characteristics
      * Returns a score between 0.0 (poor) and 1.0 (excellent)
@@ -292,11 +290,11 @@ class MLKitOcrEngine(private val deviceType: DeviceType = DeviceType.HORIBA) {
         // Calculate score based on:
         // 1. Number of white pixels (should be moderate, not too many/few)
         // 2. Distribution of white pixels (should have some clustering for text)
-        
+
         val totalPixels = (mat.rows() * mat.cols()).toDouble()
         val whitePixels = Core.countNonZero(mat).toDouble()
         val whiteRatio = whitePixels / totalPixels
-        
+
         // Ideal white ratio for text: 10-30%
         val ratioScore = when {
             whiteRatio < 0.05 -> 0.0  // Too little text
@@ -304,14 +302,14 @@ class MLKitOcrEngine(private val deviceType: DeviceType = DeviceType.HORIBA) {
             whiteRatio in 0.10..0.30 -> 1.0  // Ideal range
             else -> 0.5  // Acceptable but not ideal
         }
-        
+
         // Edge density as a proxy for text clarity
         val edges = Mat()
         Imgproc.Canny(mat, edges, 50.0, 150.0)
         val edgePixels = Core.countNonZero(edges).toDouble()
         val edgeScore = (edgePixels / totalPixels).coerceIn(0.0, 1.0)
         edges.release()
-        
+
         // Combined score
         return ratioScore * 0.7 + edgeScore * 0.3
     }
@@ -517,29 +515,29 @@ class MLKitOcrEngine(private val deviceType: DeviceType = DeviceType.HORIBA) {
     fun cleanup() {
         textRecognizer.close()
     }
-    
+
     /**
      * Detect test type from OCR text
      * Returns detected TestType or GLUCOSE as default
      */
     fun detectTestType(text: String): TestType {
         val upperText = text.uppercase()
-        
+
         return when {
             // Cholesterol patterns
-            upperText.contains("CHOLE") || 
-            upperText.contains("CHOL") || 
+            upperText.contains("CHOLE") ||
+            upperText.contains("CHOL") ||
             upperText.contains("CHO") -> TestType.CHOLESTEROL
-            
-            // Glucose patterns  
-            upperText.contains("GLU") || 
+
+            // Glucose patterns
+            upperText.contains("GLU") ||
             upperText.contains("GLUCOSE") -> TestType.GLUCOSE
-            
+
             // Creatinine patterns
-            upperText.contains("CRE") || 
-            upperText.contains("CREAT") || 
+            upperText.contains("CRE") ||
+            upperText.contains("CREAT") ||
             upperText.contains("CREATININE") -> TestType.CREATININE
-            
+
             // Default to glucose if nothing detected
             else -> TestType.GLUCOSE
         }

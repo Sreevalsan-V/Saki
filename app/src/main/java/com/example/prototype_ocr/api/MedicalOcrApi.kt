@@ -73,4 +73,30 @@ interface MedicalOcrApi {
         @Query("userId") userId: String? = null,
         @Query("panelId") panelId: String? = null
     ): Response<ApiResponse<Map<String, Any>>>
+    
+    // ========== SERVER OCR ENDPOINTS (Optional Module) ==========
+    
+    /**
+     * Check if OCR service is available
+     */
+    @GET("/api/ocr/health")
+    suspend fun checkOcrHealth(): Response<ApiResponse<Map<String, Any>>>
+    
+    /**
+     * Process full image OCR on server
+     */
+    @POST("/api/ocr/process")
+    suspend fun processServerOcr(
+        @Header("Authorization") token: String,
+        @Body request: ServerOcrRequest
+    ): Response<ApiResponse<ServerOcrResult>>
+    
+    /**
+     * Process cropped regions OCR on server
+     */
+    @POST("/api/ocr/crop-and-process")
+    suspend fun processServerCroppedOcr(
+        @Header("Authorization") token: String,
+        @Body request: ServerCroppedOcrRequest
+    ): Response<ApiResponse<ServerCroppedOcrResult>>
 }

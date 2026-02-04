@@ -84,9 +84,11 @@ class MainActivity : AppCompatActivity() {
         overlayView = findViewById(R.id.overlayView)
         previewView = findViewById(R.id.previewView)
 
-        // Enable strip visualization for Horiba devices
+        // Enable strip visualization for Horiba devices, or crop regions for Robonik
         if (deviceType == DeviceType.HORIBA) {
             overlayView.enableStripVisualization(true, MLKitOcrEngine.HORIBA_STRIP_COUNT)
+        } else if (deviceType == DeviceType.ROBONIK) {
+            overlayView.enableCropRegions(true)
         }
 
         // Check and request permissions

@@ -88,3 +88,39 @@ data class LocationData(
     val latitude: Double,
     val longitude: Double
 )
+
+// ========== SERVER OCR MODELS ==========
+// Note: Server OCR models are defined in ServerOcrRepository.kt
+
+/**
+ * Response from server OCR (legacy - kept for compatibility)
+ */
+data class ServerOcrResponse(
+    val rawText: String,
+    val value: Double?,
+    val confidence: Float,
+    val detections: Int
+)
+
+/**
+ * Response from cropped OCR
+ */
+data class CroppedOcrResponse(
+    val crops: List<CropOcrResult>
+)
+
+data class CropOcrResult(
+    val name: String,
+    val text: String,
+    val value: Any?,     // Can be Double (mg/dL) or String (test type)
+    val confidence: Float
+)
+
+/**
+ * OCR service health check response
+ */
+data class OcrHealthResponse(
+    val status: String,
+    val service: String,
+    val version: String
+)
