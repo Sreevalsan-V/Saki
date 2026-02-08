@@ -18,7 +18,7 @@ object ServerConfig {
     }
     
     // ====== CHANGE THIS TO SWITCH ENVIRONMENTS ======
-    private val currentEnvironment = Environment.LOCAL_DEVICE
+    private val currentEnvironment = Environment.NGROK
     // ================================================
     
     // Server URLs

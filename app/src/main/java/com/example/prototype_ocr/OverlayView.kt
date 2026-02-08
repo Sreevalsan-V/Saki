@@ -67,9 +67,9 @@ class OverlayView @JvmOverloads constructor(
     private val defaultRobonikCrops = listOf(
         CropRegion(
             name = "Test Type",
-            x = 0.35f,        // Top-center horizontally
-            y = 0.05f,        // Top of parent box
-            width = 0.30f,    // 30% width
+            x = 0.05f,        // Top-center horizontally
+            y = 0.0f,        // Top of parent box
+            width = 0.50f,    // 30% width
             height = 0.25f,   // 25% height
             color = Color.CYAN
         ),
@@ -77,8 +77,8 @@ class OverlayView @JvmOverloads constructor(
             name = "mg/dL Value",
             x = 0.05f,        // Left side
             y = 0.35f,        // Middle vertically
-            width = 0.40f,    // 40% width
-            height = 0.30f,   // 30% height
+            width = 0.60f,    // 40% width
+            height = 0.25f,   // 30% height
             color = Color.YELLOW
         )
     )

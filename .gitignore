@@ -20,6 +20,4 @@ captures/
 .cxx/
 
 # OpenCV module
-opencv/build/
-opencv/.cxx/
-opencv/java/javadoc/
+opencv/
