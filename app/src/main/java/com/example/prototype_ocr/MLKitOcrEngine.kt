@@ -45,9 +45,13 @@ class MLKitOcrEngine(private val deviceType: DeviceType = DeviceType.HORIBA) {
     private val textRecognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
     var useStripProcessing = true // Enable/disable strip-based processing for Horiba
 
-    // Regex patterns for mg/dL detection optimized for Horiba displays
+    // Regex patterns for mg/dL detection — supports both Horiba and Robonik formats
     private val mgDlPatterns = listOf(
-        // Strict patterns requiring explicit mg/dL format
+        // Robonik format: "Res:    140.1920mg/dl LO" — no space between value and unit
+        Pattern.compile("""[Rr]es\s*:\s*(\d+(?:\.\d+)?)\s*mg/d[lL]""", Pattern.CASE_INSENSITIVE),
+        // Compact no-space format (Robonik): 140.1920mg/dl
+        Pattern.compile("""(\d{2,4}(?:\.\d+)?)mg/d[lL]""", Pattern.CASE_INSENSITIVE),
+        // Strict Horiba patterns requiring explicit mg/dL with optional spaces
         Pattern.compile("""(\d+\s*(?:\.\s*\d+)?)\s*mg\s*/\s*d[lL]""", Pattern.CASE_INSENSITIVE),
         Pattern.compile("""(\d+(?:\.\d+)?)\s*mg\s*/\s*dl""", Pattern.CASE_INSENSITIVE),
         Pattern.compile("""(\d+(?:\.\d+)?)\s*mg/dL""", Pattern.CASE_INSENSITIVE),
@@ -58,12 +62,12 @@ class MLKitOcrEngine(private val deviceType: DeviceType = DeviceType.HORIBA) {
     )
 
     suspend fun processImage(bitmap: Bitmap): Pair<OcrResult?, String> {
-        // Use strip processing for Horiba if enabled
+        // Use strip processing for Horiba only
         if (deviceType == DeviceType.HORIBA && useStripProcessing) {
             return processImageWithStrips(bitmap)
         }
 
-        // Original processing for Robonik or when strip processing is disabled
+        // Full-image processing for Robonik (or when strip processing is disabled)
         return suspendCancellableCoroutine { continuation ->
             // Apply preprocessing to improve OCR accuracy
             val preprocessedBitmap = preprocessImage(bitmap)
@@ -220,64 +224,52 @@ class MLKitOcrEngine(private val deviceType: DeviceType = DeviceType.HORIBA) {
     }
 
     /**
-     * Robonik preprocessing - Light blue background with dark blue text and white values
-     * Optimized for light blue LCD with dark blue text and white numbers
-     * Uses adaptive threshold selection (140-190 range) for varying lighting conditions
+     * Robonik preprocessing — Blue background, dark-blue text, YELLOW result line.
+     *
+     * Key insight from display image: the result line ("Res: 140.1920mg/dl LO") is rendered
+     * in YELLOW, while all other lines are dark blue. We exploit this color difference using
+     * HSV masking to isolate yellow (the result) and white text (labels) together,
+     * producing a clean black-on-white image for ML Kit.
      */
     private fun preprocessRobonik(bitmap: Bitmap): Bitmap {
         val mat = Mat()
         Utils.bitmapToMat(bitmap, mat)
 
-        // Convert to grayscale
-        val gray = Mat()
-        Imgproc.cvtColor(mat, gray, Imgproc.COLOR_BGR2GRAY)
+        // Convert BGR -> HSV to work in perceptual color space
+        val hsv = Mat()
+        Imgproc.cvtColor(mat, hsv, Imgproc.COLOR_BGR2HSV)
 
-        // Try multiple threshold values and select the best result
-        val thresholdRange = 140..170 step 10
-        var bestResult: Mat? = null
-        var bestScore = 0.0
+        // ── Mask 1: Yellow text (the result line) ──────────────────────────────
+        // Yellow hue: ~15°–40°, high saturation, high value
+        val lowerYellow = org.opencv.core.Scalar(15.0, 80.0, 100.0)
+        val upperYellow = org.opencv.core.Scalar(40.0, 255.0, 255.0)
+        val yellowMask = Mat()
+        Core.inRange(hsv, lowerYellow, upperYellow, yellowMask)
 
-        for (threshold in thresholdRange) {
-            val bw = Mat()
-            Imgproc.threshold(gray, bw, threshold.toDouble(), 255.0, Imgproc.THRESH_BINARY)
+        // ── Mask 2: White/light text (labels like NAME, Std Res, Factor) ───────
+        // White: low saturation, very high value
+        val lowerWhite = org.opencv.core.Scalar(0.0, 0.0, 170.0)
+        val upperWhite = org.opencv.core.Scalar(180.0, 50.0, 255.0)
+        val whiteMask = Mat()
+        Core.inRange(hsv, lowerWhite, upperWhite, whiteMask)
 
-            // Invert: white text on black background for OCR
-            val inverted = Mat()
-            Core.bitwise_not(bw, inverted)
+        // ── Combine both masks ─────────────────────────────────────────────────
+        val combinedMask = Mat()
+        Core.bitwise_or(yellowMask, whiteMask, combinedMask)
 
-            // Score based on text-like regions (white pixels in reasonable distribution)
-            val score = evaluateThreshold(inverted)
-
-            if (score > bestScore) {
-                bestScore = score
-                bestResult?.release()
-                bestResult = inverted.clone()
-            }
-
-            bw.release()
-            inverted.release()
-        }
-
-        // Apply morphological operations to clean up the best result
+        // ── Morphology: close small gaps in characters, remove specks ──────────
         val kernel = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, Size(2.0, 2.0))
         val cleaned = Mat()
-        Imgproc.morphologyEx(bestResult!!, cleaned, Imgproc.MORPH_CLOSE, kernel)
+        Imgproc.morphologyEx(combinedMask, cleaned, Imgproc.MORPH_CLOSE, kernel)
         Imgproc.morphologyEx(cleaned, cleaned, Imgproc.MORPH_OPEN, kernel)
 
-        // Convert back to bitmap
-        val resultBitmap = Bitmap.createBitmap(
-            cleaned.cols(),
-            cleaned.rows(),
-            Bitmap.Config.ARGB_8888
-        )
+        // ── Convert mask to bitmap (white text on black = ML Kit friendly) ─────
+        val resultBitmap = Bitmap.createBitmap(cleaned.cols(), cleaned.rows(), Bitmap.Config.ARGB_8888)
         Utils.matToBitmap(cleaned, resultBitmap)
 
-        // Cleanup
-        mat.release()
-        gray.release()
-        bestResult.release()
-        cleaned.release()
-        kernel.release()
+        mat.release(); hsv.release()
+        yellowMask.release(); whiteMask.release()
+        combinedMask.release(); cleaned.release(); kernel.release()
 
         return resultBitmap
     }
@@ -461,10 +453,17 @@ class MLKitOcrEngine(private val deviceType: DeviceType = DeviceType.HORIBA) {
     }
     private fun normalizeUnits(text: String): String {
         return text
+            // Strip Robonik range flags (LO/HI/LOW/HIGH) that appear after the unit
+            .replace(Regex("\\s+(LO|HI|LOW|HIGH)\\s*$", RegexOption.IGNORE_CASE), "")
+            // Normalise common OCR misreads of "result"
             .replace("resut", "result")
             .replace("resutt", "result")
             .replace("recut", "result")
             .replace("resu1t", "result")
+            // Normalise Robonik "res:" prefix misreads
+            .replace("rec:", "res:")
+            .replace("re5:", "res:")
+            // Normalise mg/dL unit misreads
             .replace("mgfdl", "mg/dl")
             .replace("mgfdi", "mg/dl")
             .replace("mgd1", "mg/dl")
@@ -490,21 +489,32 @@ class MLKitOcrEngine(private val deviceType: DeviceType = DeviceType.HORIBA) {
 
 
     private fun calculateConfidence(text: String, value: Double): Float {
-        var confidence = 0.5f // Lower base confidence to be more strict
+        var confidence = 0.5f // Base confidence
 
-        // Higher confidence for specific patterns we expect in Horiba
         when {
-            text.contains("mg/dL", ignoreCase = true) -> confidence += 0.4f
-            text.contains("Result", ignoreCase = true) && text.contains("mg", ignoreCase = true) -> confidence += 0.2f
-            text.contains("mg", ignoreCase = true) && text.contains("dL", ignoreCase = true) -> confidence += 0.3f
-
-            // Confidence based on value range (typical medical values)
-            value in 70.0..400.0 -> confidence += 0.2f
-            value in 50.0..600.0 -> confidence += 0.1f
-            value == 0.0 -> confidence -= 0.5f // Heavily penalize 0.0 values
+            // Horiba: explicit "mg/dL" on same line
+            text.contains("mg/dL", ignoreCase = true) ->
+                confidence += 0.4f
+            // Robonik: "Res:" prefix with mg unit — highly reliable
+            text.contains("Res:", ignoreCase = true) && text.contains("mg", ignoreCase = true) ->
+                confidence += 0.35f
+            // Horiba split layout: "Result" + "mg" nearby
+            text.contains("Result", ignoreCase = true) && text.contains("mg", ignoreCase = true) ->
+                confidence += 0.2f
+            // Generic: both mg and dL present anywhere
+            text.contains("mg", ignoreCase = true) && text.contains("dL", ignoreCase = true) ->
+                confidence += 0.3f
         }
 
-        // Additional validation: if no "dL" found, reduce confidence significantly
+        // Value range validation (clinical plausibility)
+        when {
+            value in 70.0..400.0 -> confidence += 0.2f   // Very typical range
+            value in 50.0..600.0 -> confidence += 0.1f   // Acceptable range
+            value == 0.0         -> confidence -= 0.5f   // Almost certainly wrong
+            value > 1000.0       -> confidence -= 0.3f   // Likely a misread
+        }
+
+        // If no unit found at all, reduce confidence significantly
         if (!text.contains("dL", ignoreCase = true) && !text.contains("dl", ignoreCase = true)) {
             confidence -= 0.4f
         }

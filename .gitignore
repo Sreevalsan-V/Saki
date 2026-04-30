@@ -18,6 +18,3 @@ captures/
 # Native build
 .externalNativeBuild/
 .cxx/
-
-# OpenCV module
-opencv/
